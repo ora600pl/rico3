@@ -1,0 +1,23 @@
+[package]
+name = "rico3"
+version = "0.2.0"
+edition = "2021"
+authors = ["Kamil Stawiarski <kamil@ora-600.pl>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+binread = "2.2.0"
+clap = { version = "3.0", features = ["derive"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+oracle = "0.5.6"
+hex = "0.4.3"
+rust_decimal = "1.30.0" 
+rust_decimal_macros = "1.30"
+chrono = "0.4.28"
+rand = "0.8.5"
+crossbeam-channel = "0.5.8"
+tui = "0.19"
+crossterm = "0.25"
+proc-maps = "0.2.0"
