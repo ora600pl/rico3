@@ -27,3 +27,8 @@ OPTIONS:
 
     -V, --version                          Print version information
 
+
+
+https://blog.ora-600.pl/2023/09/04/last-resort-data-recovery/
+
+

@@ -167,7 +167,7 @@ fn write_log(workdir: String, action: String) {
     let dt: DateTime<Utc> = now.into();
     let fname = format!("{}/rico3.log",workdir);
 
-    let logline = format!("{}\t{}", dt.format("%Y%m%d%H%M%S"), action);
+    let logline = format!("{}\t{}\n", dt.format("%Y%m%d%H%M%S"), action);
     let mut f_obj = File::options().append(true).create(true).open(fname).unwrap();
 
     f_obj.write_all(logline.as_bytes());
