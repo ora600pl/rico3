@@ -225,7 +225,40 @@ pub fn consolidate_objects_from_memory(pid: u32, memory_size: u64, workdir: Stri
         }
     }
 
-    
+    let mut buffer = [0; 1_048_576];
+    let fname = format!("/proc/{}/mem", pid);
+    let mut f = File::open(&fname).unwrap(); 
+
+    let (tx, rx) = bounded::<Vec<u8>>(parallel as usize);
+    let mut threads: Vec<thread::JoinHandle<_>> = Vec::new();
+    for p in 0..parallel  {
+        let rx = rx.clone();
+        let w = workdir.clone();
+        threads.push(thread::spawn(move || {consolidate_chunk_parallel(rx, w, p)}));
+    }
+
+    f.seek(SeekFrom::Start(scan_from));
+    loop {
+        let res = f.read(&mut buffer);
+        if res.is_err() {
+            break;
+        }
+        let out_bytes = res.unwrap();
+        if out_bytes == 0 {
+            break;
+        }
+
+        let pos = f.seek(SeekFrom::Current(0)).unwrap();
+        if pos >= scan_to {
+            break;
+        }
+        
+        tx.send(buffer.to_vec());
+    }
+    drop(tx);
+    for t in threads {
+        t.join().unwrap();
+    }
 
 }
 

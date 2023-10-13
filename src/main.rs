@@ -50,6 +50,10 @@ fn main() {
             for f in params.data_files {
                 block_organizer::extract_from_file(f, params.workdir.clone(), args.parallel);
             }
+        } else if params.action == "consolidate objects from memory" {
+            let pid: u32 = params.data_files[0].parse().unwrap();
+            let memory_size: u64 = params.data_files[1].parse().unwrap();
+            block_organizer::consolidate_objects_from_memory(pid, memory_size, params.workdir.clone(), args.parallel);
         }
     }  else {
         println!("{:?}", oracle_decoder::guess_type_str(args.manual_string));

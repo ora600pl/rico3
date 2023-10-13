@@ -150,6 +150,9 @@ fn check_number(bytes_val: Vec<u8>) -> Result<OracleType, String> {
 
 pub fn guess_type(byte_intput: Vec<u8>) -> OracleType {
     //println!("\t\tGuessing {:x?}", byte_intput.as_slice());
+    if byte_intput.len() == 0 {
+        return OracleType{data_type: "Unrecognized".to_string(), value: "NONE".to_string()};
+    }
     if byte_intput[0] == 255 {
         return OracleType{data_type: "NULL".to_string(), value: "NULL".to_string()};
     }
