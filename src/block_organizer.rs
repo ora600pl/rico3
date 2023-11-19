@@ -149,6 +149,11 @@ struct ColumnDataLong {
     #[br(count=col_len)]
     col_data: Vec<u8>,
 }
+
+struct ChunkData {
+    chunk_bytes: Vec<u8>,
+    chunk_offset: u64,
+}
  
 fn write_bytes_to_file(fname: String, bytes_val:Vec<u8>) {
     let mut f_obj = File::options().append(true).create(true).open(fname).unwrap();
@@ -211,6 +216,31 @@ fn consolidate_chunk_parallel(rc: Receiver<Vec<u8>>, workdir: String, worker_id:
     println!("Stopping worker {}", worker_id);
 }
 
+fn consolidate_chunk_parallel2(rc: Receiver<ChunkData>, workdir: String, worker_id: u8) {
+    println!("Starting worker {}", worker_id);
+    for chunk_data in rc {
+        let chunk_bytes = chunk_data.chunk_bytes;
+        let chunk_len = chunk_bytes.len();
+        let chunk_len_blocks = chunk_len as u64 / BLOCK_SIZE;
+        let mut position = 0;
+        let scan_to = chunk_len_blocks;
+        while position < scan_to {
+            let block_data = &chunk_bytes[(position*BLOCK_SIZE) as usize..(position+1) as usize * BLOCK_SIZE as usize];
+            if block_data[0] == 6 && block_data[20] == 1 {
+                let objd = u32::from_ne_bytes(block_data[24..28].try_into().unwrap());
+                let f_obj_name = format!("{}/{}.dat", workdir, objd);
+                let f_obj_log_name = format!("{}/{}.log", workdir, objd);
+                write_bytes_to_file(f_obj_name, block_data.to_vec());
+                let rba = u32::from_ne_bytes(block_data[4..8].try_into().unwrap());
+                let block_meta = format!("Block: {} found at offset: {}", rba, chunk_data.chunk_offset+position*BLOCK_SIZE);
+                write_text_to_file(f_obj_log_name, block_meta);
+            }
+            position += 1;
+        }
+    }
+    println!("Stopping worker {}", worker_id);
+}
+
 pub fn consolidate_objects_from_memory(pid: u32, memory_size: u64, workdir: String, parallel: u8) {
     println!("Processing pid {} for memory size {}", pid, memory_size);
     let maps = get_process_maps(pid as Pid).unwrap();
@@ -229,16 +259,17 @@ pub fn consolidate_objects_from_memory(pid: u32, memory_size: u64, workdir: Stri
     let fname = format!("/proc/{}/mem", pid);
     let mut f = File::open(&fname).unwrap(); 
 
-    let (tx, rx) = bounded::<Vec<u8>>(parallel as usize);
+    let (tx, rx) = bounded::<ChunkData>(parallel as usize);
     let mut threads: Vec<thread::JoinHandle<_>> = Vec::new();
     for p in 0..parallel  {
         let rx = rx.clone();
         let w = workdir.clone();
-        threads.push(thread::spawn(move || {consolidate_chunk_parallel(rx, w, p)}));
+        threads.push(thread::spawn(move || {consolidate_chunk_parallel2(rx, w, p)}));
     }
 
     f.seek(SeekFrom::Start(scan_from));
     loop {
+        let chunk_pos = f.seek(SeekFrom::Current(0)).unwrap();
         let res = f.read(&mut buffer);
         if res.is_err() {
             break;
@@ -252,8 +283,8 @@ pub fn consolidate_objects_from_memory(pid: u32, memory_size: u64, workdir: Stri
         if pos >= scan_to {
             break;
         }
-        
-        tx.send(buffer.to_vec());
+        let chunk = ChunkData{chunk_bytes: buffer.to_vec(), chunk_offset: chunk_pos};
+        tx.send(chunk);
     }
     drop(tx);
     for t in threads {

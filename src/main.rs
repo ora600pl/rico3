@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 mod block_organizer;
 mod oracle_decoder;
+mod buffer_organizer;
  
 /// Tool for extracting raw data from datafiles
 #[derive(Parser, Debug)]
@@ -54,6 +55,11 @@ fn main() {
             let pid: u32 = params.data_files[0].parse().unwrap();
             let memory_size: u64 = params.data_files[1].parse().unwrap();
             block_organizer::consolidate_objects_from_memory(pid, memory_size, params.workdir.clone(), args.parallel);
+        } else if params.action == "visualize buffers" {
+            let file_addresses = params.data_files[0].clone();
+            let obj: u32 = params.data_files[1].parse().unwrap();
+            let pid: u32 = params.data_files[2].parse().unwrap();
+            buffer_organizer::visualize_buffers(file_addresses, obj, pid); 
         }
     }  else {
         println!("{:?}", oracle_decoder::guess_type_str(args.manual_string));
