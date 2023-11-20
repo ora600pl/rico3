@@ -68,7 +68,7 @@ struct Ktbbhcsc
 {
     kscnbas: u32,
     kscnwrp: u32,
-}
+} 
 
 #[derive(BinRead)]
 #[derive(Debug)]
@@ -447,12 +447,18 @@ fn extract_block(block_data: Vec<u8>, workdir: String) {
                         let col_len: u8 = block_cursor.read_ne().unwrap();
 
                         if col_len == 254 {
-                            let column_data: ColumnDataLong = block_cursor.read_ne().unwrap();
-                            column_data_value = oracle_decoder::guess_type(column_data.col_data);
+                            let column_data: Result<ColumnDataLong, binread::Error> = block_cursor.read_ne();
+                            if column_data.is_ok() {
+                                let column_data = column_data.unwrap();
+                                column_data_value = oracle_decoder::guess_type(column_data.col_data);
+                            }
                         } else if col_len < 254 {
                             block_cursor.seek(SeekFrom::Current(-1));
-                            let column_data: ColumnData = block_cursor.read_ne().unwrap();
-                            column_data_value = oracle_decoder::guess_type(column_data.col_data);
+                            let column_data: Result<ColumnData, binread::Error> = block_cursor.read_ne();
+                            if column_data.is_ok() {
+                                let column_data = column_data.unwrap();
+                                column_data_value = oracle_decoder::guess_type(column_data.col_data);
+                            }
                         }
 
                         row_string = format!("{}|{}", row_string, column_data_value.value);
